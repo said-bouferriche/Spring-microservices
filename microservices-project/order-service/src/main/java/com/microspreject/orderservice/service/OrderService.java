@@ -1,5 +1,6 @@
 package com.microspreject.orderservice.service;
 
+import com.microspreject.orderservice.dto.InventoryResponse;
 import com.microspreject.orderservice.dto.OrderLineItemsDto;
 import com.microspreject.orderservice.dto.OrderRequest;
 import com.microspreject.orderservice.model.Order;
@@ -7,7 +8,9 @@ import com.microspreject.orderservice.model.OrderLineItems;
 import com.microspreject.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +19,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final WebClient webClient;
 
     public void placeOrder(OrderRequest orderRequest){
         Order order = new Order();
@@ -25,7 +29,30 @@ public class OrderService {
             .stream()
             .map(this::mapToDto).toList();
         order.setOrderLineItem(orderLineItems);
-        orderRepository.save(order);
+
+        List<String> skuCodes = order.getOrderLineItem()
+            .stream().map(OrderLineItems::getSkuCode)
+            .toList();
+
+
+        //Call inventory Service to check the existence of the product
+
+        InventoryResponse[] inventoryResponsesArray = webClient.get()
+            .uri("http://localhost:8082/api/inventory", uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+            .retrieve()
+            .bodyToMono(InventoryResponse[].class)
+            .block();
+
+        boolean allProductsInStock = Arrays.stream(inventoryResponsesArray).allMatch(InventoryResponse::isInStock);
+
+        if (allProductsInStock){
+            orderRepository.save(order);
+        }
+        else {
+            throw new IllegalArgumentException("Some Products is not in stock, please try again");
+        }
+
+
 
 
     }
