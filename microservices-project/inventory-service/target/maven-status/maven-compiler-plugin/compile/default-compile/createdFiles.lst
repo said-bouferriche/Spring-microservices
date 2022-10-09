@@ -1,0 +1,5 @@
+com\microsproject\inventoryservice\InventoryServiceApplication.class
+com\microsproject\inventoryservice\repository\InventoryRepository.class
+com\microsproject\inventoryservice\model\Inventory.class
+com\microsproject\inventoryservice\Controller\InventoryController.class
+com\microsproject\inventoryservice\service\InventoryService.class
